@@ -28,7 +28,7 @@ For each character in the label, take `p = count / length`, add up `p * log2(p)`
 Requires Python 3 and Scapy.
 
 ```powershell
-git clone https://github.com/Lukej2006/dns-anomaly-detector.git
+git clone https://github.com/LukeJ2006/dns-anomaly-detector.git
 cd dns-anomaly-detector
 python -m venv .venv
 .venv\Scripts\activate
@@ -90,7 +90,7 @@ The epicgames.com line is a false positive: a real background lookup from the Ep
 | `normal.pcapng` (everyday browsing) | 685 | 7 | All 7 are false positives |
 | `suspicious.pcapng` (generated test traffic) | 70 | 27 | All 26 generated lookups caught, plus 1 background lookup |
 
-Raising the thresholds to `--entropy 3.8 --length 60` cut false positives on the normal capture from 7 to 3. At those settings, the suspicious capture still flagged all 26 generated lookups
+Raising the thresholds to `--entropy 3.8 --length 60` cut false positives on the normal capture from 7 to 3. At those settings, the suspicious capture still flagged all 26 generated lookups.
 
 ## Testing
 
