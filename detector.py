@@ -3,14 +3,19 @@ from collections import Counter
 
 from scapy.all import rdpcap
 from scapy.layers.dns import DNS, DNSQR
-
+from scapy.layers.inet import IP
+from scapy.layers.inet6 import IPv6
 CAPTURE = "captures/normal.pcapng"
 
 # Thresholds: tweak these to make the rules stricter or looser
 LONG_NAME_LIMIT = 50
 ENTROPY_LIMIT = 3.5
-NXDOMAIN_LIMIT = 3
-
+NXDOMAIN_LIMIT = 10  # total failed lookups in one capture before we flag them
+# Your normal DNS servers (from Step 2). Add any others ipconfig /all lists.
+EXPECTED_DNS_SERVERS = {
+    "2001:578:3f::30",
+    "2001:578:3f:1::30",
+}
 
 def clean(qname):
     """Turn b'www.google.com.' into 'www.google.com'."""
@@ -56,11 +61,25 @@ def rule_nxdomain(packets):
     for pkt in packets:
         if pkt.haslayer(DNSQR) and pkt[DNS].qr == 1 and pkt[DNS].rcode == 3:
             failed[clean(pkt[DNSQR].qname)] += 1
-    findings = []
-    for domain, n in failed.items():
-        if n >= NXDOMAIN_LIMIT:
+        findings = []
+    if sum(failed.values()) >= NXDOMAIN_LIMIT:
+        for domain, n in failed.items():
             findings.append({"domain": domain, "rule": "nxdomain", "value": n})
     return findings
+
+# Rule 4: queries sent to a DNS server that isn't one of yours
+def rule_unexpected_server(packets):
+    seen = set()
+    findings = []
+    for pkt in packets:
+        if pkt.haslayer(DNSQR) and pkt[DNS].qr == 0:
+            dst = pkt[IP].dst if pkt.haslayer(IP) else pkt[IPv6].dst
+            domain = clean(pkt[DNSQR].qname)
+            if dst not in EXPECTED_DNS_SERVERS and (dst, domain) not in seen:
+                seen.add((dst, domain))
+                findings.append({"domain": domain, "rule": "unexpected_server", "value": dst})
+    return findings
+
 
 packets = rdpcap(CAPTURE)
 
@@ -84,6 +103,7 @@ findings = []
 findings += rule_long_names(counts)
 findings += rule_high_entropy(counts)
 findings += rule_nxdomain(packets)
+findings += rule_unexpected_server(packets)
 
 print()
 print(f"Findings: {len(findings)}")
