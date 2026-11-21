@@ -4,3 +4,4 @@ venv/
 captures/
 *.pcap
 *.pcapng
+*.csv
