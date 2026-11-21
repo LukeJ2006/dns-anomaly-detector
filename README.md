@@ -61,10 +61,24 @@ python detector.py captures\suspicious.pcapng --output report.csv
 From `suspicious.pcapng`, a capture of generated test traffic: 20 random `.test` lookups, 5 very long `.example.com` lookups, and one lookup sent to `8.8.8.8`.
 
 ```
+Findings: 57
+  [long_name] asxjezidgggviabovtompssujxiuuygmbnfjexylarwutmunipbcfvm.example.com (67)
+  [long_name] fmtyllegoncancixmigagtsrwoyslmxdllbshhulruepvlsbnjlneaz.example.com (67)
+  ...
+  [high_entropy] account-public-service-prod.ak.epicgames.com (3.84)
+  [high_entropy] fbwq5gh6xv8320rtlnpc.test (4.32)
+  [high_entropy] 3nleoutdgjfvizqymkp1.test (4.32)
+  ...
+  [high_entropy] asxjezidgggviabovtompssujxiuuygmbnfjexylarwutmunipbcfvm.example.com (4.36)
+  ...
+  [nxdomain] fbwq5gh6xv8320rtlnpc.test (2)
+  [nxdomain] 3nleoutdgjfvizqymkp1.test (2)
+  ...
+  [unexpected_server] google.com (8.8.8.8)
 
 70 queries analyzed, 27 domains flagged (entropy: 26, length: 5, NXDOMAIN: 25, resolver: 1)
 ```
-
+The epicgames.com line is a false positive: a real background lookup from the Epic Games launcher that happened during the capture.
 
 ![Summary output](screenshots/summary.png)
 ![CSV report](screenshots/report-csv.png)
@@ -76,7 +90,7 @@ From `suspicious.pcapng`, a capture of generated test traffic: 20 random `.test`
 | `normal.pcapng` (everyday browsing) | 685 | 7 | All 7 are false positives |
 | `suspicious.pcapng` (generated test traffic) | 70 | 27 | All 26 generated lookups caught, plus 1 background lookup |
 
-Raising the thresholds to `--entropy 3.8 --length 60` cut false positives on the normal capture from 7 to 3. TODO: add what the suspicious capture showed at those settings.
+Raising the thresholds to `--entropy 3.8 --length 60` cut false positives on the normal capture from 7 to 3. At those settings, the suspicious capture still flagged all 26 generated lookups
 
 ## Testing
 
@@ -96,9 +110,6 @@ Scapy creates those names while the program runs, so the editor can't see them. 
 
 **DNS traffic over IPv6**
 Windows sent its DNS queries to the ISP's IPv6 DNS servers, not IPv4 ones. The resolver rule had to read the destination from either the `IP` or `IPv6` layer.
-
-**Encrypted DNS**
-TODO: describe what you ran into (for example, lookups missing from Wireshark because the browser was using encrypted DNS) and how you fixed it.
 
 **The NXDOMAIN rule never fired on test traffic**
 The first version flagged a domain only after 3 failed lookups of that same name. Windows looks up each name twice (an IPv4 `A` record and an IPv6 `AAAA` record), so each random name failed exactly twice and nothing was flagged. Changed the rule to count failed lookups across the whole capture, which also matches how DGA malware behaves: many different names, each failing once or twice.
